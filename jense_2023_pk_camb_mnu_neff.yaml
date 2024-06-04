@@ -1,0 +1,108 @@
+network_name: jense_2023_camb_mnu_neff
+path: jense_2023_camb_mnu_neff
+
+emulated_code:
+  name: camb
+  version: "1.5.2"
+  inputs: [ ombh2, omch2, As, ns, H0, z, NonLinearModel.HMCode_A_baryon, NonLinearModel.HMCode_eta_baryon, NonLinearModel.HMCode_logT_AGN, mnu, nnu ]
+  extra_args:
+    kmax: 50.0
+    k_per_logint: 130
+    AccuracyBoost: 1.0
+    lAccuracyBoost: 1.2
+    lSampleBoost: 1.0
+    DoLateRadTruncation: false
+    recombination_model: CosmoRec
+    NonLinearModel.Min_kh_nonlinear: 5.0e-5
+    NonLinearModel.halofit_version: "mead2020"
+
+samples:
+  Ntraining: 120000
+
+  parameters:
+    ombh2: [0.015,0.030]
+    omch2: [0.09,0.15]
+    logA: [2.5,3.5]
+    ns: [0.85, 1.05]
+    h: [0.4,1.0]
+    # P(k)-specific
+    z: [0.0, 5.0]
+    A_b: [2.0, 4.0]
+    eta_b: [0.5, 1.0]
+    logT_AGN: [7.3, 8.3]
+    NonLinearModel.HMCode_A_baryon: "lambda A_b: A_b"
+    NonLinearModel.HMCode_eta_baryon: "lambda eta_b: eta_b"
+    NonLinearModel.HMCode_logT_AGN: "lambda logT_AGN: logT_AGN"
+    H0: "lambda h: h * 100.0"
+    As: "lambda logA: 1.e-10 * np.exp(logA)"
+    mnu: [0.0, 0.5]
+    nnu: [1.0, 5.0]
+
+networks:
+  - quantity: "Pk/lin"
+    type: NN
+    log: True
+    modes:
+      label: k
+      range: [5.e-5, 50.0]
+      spacing: log
+      steps: 1000
+    n_traits:
+      n_hidden: [ 512, 512, 512, 512 ]
+    training:
+      validation_split: 0.1
+      learning_rates: [ 1.e-2, 1.e-3, 1.e-4, 1.e-5, 1.e-6, 1.e-7 ]
+      batch_sizes: [ 1000, 2000, 5000, 10000, 20000, 50000 ]
+      patience_values: 100
+      max_epochs: 1000
+
+  - quantity: "Pk/nonlin"
+    type: NN
+    log: True
+    modes:
+      label: k
+      range: [5.e-5, 50.0]
+      spacing: log
+      steps: 1000
+    n_traits:
+      n_hidden: [ 512, 512, 512, 512 ]
+    training:
+      validation_split: 0.1
+      learning_rates: [ 1.e-2, 1.e-3, 1.e-4, 1.e-5, 1.e-6, 1.e-7 ]
+      batch_sizes: [ 1000, 2000, 5000, 10000, 20000, 50000 ]
+      patience_values: 100
+      max_epochs: 1000
+
+  - quantity: "Pk/nlboost"
+    type: NN
+    log: False
+    modes:
+      label: k
+      range: [5.e-5, 50.0]
+      spacing: log
+      steps: 1000
+    n_traits:
+      n_hidden: [ 512, 512, 512, 512 ]
+    training:
+      validation_split: 0.1
+      learning_rates: [ 1.e-2, 1.e-3, 1.e-4, 1.e-5, 1.e-6, 1.e-7 ]
+      batch_sizes: [ 1000, 2000, 5000, 10000, 20000, 50000 ]
+      patience_values: 100
+      max_epochs: 1000
+
+  - quantity: "sigma8"
+    inputs: [ ombh2, omch2, logA, ns, h, A_b, eta_b, logT_AGN, mnu, nnu ]
+    type: NN
+    log: True
+    modes:
+      label: z
+      range: [0, 5]
+      steps: 1000
+    n_traits:
+      n_hidden: [ 512, 512, 512, 512 ]
+    training:
+      validation_split: 0.1
+      learning_rates: [ 1.e-2, 1.e-3, 1.e-4, 1.e-5, 1.e-6, 1.e-7 ]
+      batch_sizes: [ 1000, 2000, 5000, 10000, 20000, 50000 ]
+      patience_values: 100
+      max_epochs: 1000
